@@ -70,38 +70,6 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     }
 
     /**
-     * Make request specifying http method and uri and parameters as JSON.
-     *
-     * Example:
-     *  When I make request "POST" "/api/v1/posts" with following JSON content:
-     *  """
-     *  {
-     *      "user": "user-id",
-     *      "title": "Some title"
-     *      "number": 12
-     *  }
-     *  """
-     *
-     * Example:
-     *  When I make request "PUT" "/api/v1/users/{id}" with following JSON content:
-     *  """
-     *  {
-     *      "education": [
-     *          {
-     *              "school": "A primary school",
-     *              "address": "Some Street 10, SomeCity"
-     *          },
-     *          {
-     *              "school": "High School",
-     *              "address": "Another Street 1, SomeCity"
-     *          }
-     *      ],
-     *      "workplace": {
-     *          "name": "A company",
-     *          "phone": "+48 111 222 333"
-     *      }
-     *  }
-     *  """
      *
      * @When I make request :method :uri with following JSON content:
      */
@@ -110,6 +78,87 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
         $uri = $this->extractFromParameterBag($uri);
         $this->request($method, $uri, json_decode($json, true));
     }
+
+    /**
+     * Sets a HTTP Header.
+     *
+     * @param string $name  header name
+     * @param string $value header value
+     *
+     * @Given /^I set header "([^"]*)" with value "([^"]*)"$/
+     */
+    public function iSetHeaderWithValue($name, $value)
+    {
+        $this->addHeader($name, $value);
+    }
+
+    protected $token;
+
+    /**
+     * @Then save access token from the last response
+     */
+    public function saveAccessTokenFromTheLastResponse()
+    {
+        $response = $this->getResponseContentJson();
+//        $this -> token = $response['access_token'];
+        $this -> token = $response->access_token;
+        return;
+    }
+
+    protected $redirectURL;
+
+    /**
+     * @Then save redirect uri from the last response
+     */
+    public function saveRedirectUriFromTheLastResponse()
+    {
+        $response = $this->getResponseContentJson();
+        $this -> redirectURL = $response->redirect_url;
+        return;
+    }
+
+    /**
+     *
+     * @When I make request :method for payment with redirect URL from last response with following JSON content:
+     */
+    public function iMakeRequestForPaymentWithFollowingJSONContent($method, PyStringNode $json)
+    {
+        $uri = $this -> $redirectURL;
+        $this->request($method, $uri, json_decode($json, true));
+    }
+
+    /**
+     * Sets a HTTP Header.
+     *
+     * @Given /^I set access token in header$/
+     */
+    public function iSetAccessTokenInHeader()
+    {
+        $value = "Bearer " . $this->token;
+        var_dump($value);
+        echo $value;
+        $this->addHeader("Authorization:", $value );
+    }
+
+    /**
+     * Adds header
+     *
+     * @param string $name
+     * @param string $value
+     */
+    protected function addHeader($name, $value)
+    {
+        if (isset($this->headers[$name])) {
+            if (!is_array($this->headers[$name])) {
+                $this->headers[$name] = array($this->headers[$name]);
+            }
+
+            $this->headers[$name][] = $value;
+        } else {
+            $this->headers[$name] = $value;
+        }
+    }
+
 
     /**
      * @param array $headers
@@ -199,6 +248,8 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     {
         $response = $this->getResponseContentJson();
         $this->assertDocumentHasProperty($response, $property);
+        var_dump($this->token);
+        echo $this->token;
         return;
     }
 
