@@ -1,5 +1,5 @@
-Feature: Authornicate
-    Scenario: first scenario - test
+Feature: Authentication
+    Scenario: authentication
         When I make request "POST" "/oauth/v2/token" with following JSON content:
         """
             {
@@ -32,17 +32,7 @@ Feature: Authornicate
         And print last response
 
         And save redirect uri from the last response
-        And I make request POST for payment with redirect URL from last response with following JSON content:
-        """
-            {
-                    "name": "test",
-                    "price": "22",
-                    "priceNetto": "33",
-                    "vatRate": "44",
-                    "quantity": "3",
-                    "thumbnail": "https://someitem.com/thumbnail.jpg",
-                    "sku": "123"
-            }
-        """
-        And print last response
-        And show last response
+
+    @javascript
+    Scenario: Make payment
+        And go to page for make payment

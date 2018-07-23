@@ -9,6 +9,10 @@ use Codifico\ParameterBagExtension\Context\ParameterBagDictionary;
 use Behat\Symfony2Extension\Context\KernelDictionary;
 use Behat\MinkExtension\Context\MinkContext;
 use Behat\Behat\Context\Context;
+use Behat\Mink\Driver\GoutteDriver;
+use Behat\Mink\Driver\Goutte\Client as GoutteClient;
+use Behat\Mink\Mink;
+use Behat\Mink\Session;
 use Behat\Behat\Context\SnippetAcceptingContext;
 
 class RestApiContext extends MinkContext implements Context, SnippetAcceptingContext
@@ -31,6 +35,24 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     {
         $uri = $this->extractFromParameterBag($uri);
         $this->request($method, $uri);
+    }
+
+    /**
+     * Opens specified page.
+     *
+     * @When /^(?:|I )go to page for make payment$/
+     */
+    public function openSpecificPage()
+    {
+        $this->getSession()->visit($this->locatePath($this->redirectURL));
+    }
+
+    /**
+     * @Then /^I wait "(?P<seconds>.*?)"$/
+     */
+    public function wait($seconds)
+    {
+        sleep($seconds);
     }
 
     /**
@@ -100,7 +122,6 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     public function saveAccessTokenFromTheLastResponse()
     {
         $response = $this->getResponseContentJson();
-//        $this -> token = $response['access_token'];
         $this -> token = $response->access_token;
         return;
     }
@@ -114,6 +135,7 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     {
         $response = $this->getResponseContentJson();
         $this -> redirectURL = $response->redirect_url;
+        var_dump($this -> redirectURL = $response->redirect_url);
         return;
     }
 

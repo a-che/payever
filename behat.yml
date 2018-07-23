@@ -8,10 +8,8 @@ default:
         Behat\MinkExtension:
             base_url: https://sandbox.payever.de/
             default_session: 'goutte'
-            goutte:
-                guzzle_parameters:
-                    curl.options:
-                        CURLOPT_PORT: 8000
+            goutte: ~
+            selenium2: ~
             browser_name: chrome
             show_cmd: chrome %s
         Codifico\ParameterBagExtension\ServiceContainer\ParameterBagExtension:
