@@ -9,10 +9,6 @@ use Codifico\ParameterBagExtension\Context\ParameterBagDictionary;
 use Behat\Symfony2Extension\Context\KernelDictionary;
 use Behat\MinkExtension\Context\MinkContext;
 use Behat\Behat\Context\Context;
-use Behat\Mink\Driver\GoutteDriver;
-use Behat\Mink\Driver\Goutte\Client as GoutteClient;
-use Behat\Mink\Mink;
-use Behat\Mink\Session;
 use Behat\Behat\Context\SnippetAcceptingContext;
 
 class RestApiContext extends MinkContext implements Context, SnippetAcceptingContext
@@ -35,24 +31,6 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     {
         $uri = $this->extractFromParameterBag($uri);
         $this->request($method, $uri);
-    }
-
-    /**
-     * Opens specified page.
-     *
-     * @When /^(?:|I )go to page for make payment$/
-     */
-    public function openSpecificPage()
-    {
-        $this->getSession()->visit($this->locatePath($this->redirectURL));
-    }
-
-    /**
-     * @Then /^I wait "(?P<seconds>.*?)"$/
-     */
-    public function wait($seconds)
-    {
-        sleep($seconds);
     }
 
     /**
@@ -92,6 +70,49 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     }
 
     /**
+     * Opens specified page
+     * Example: Given I am on "http://batman.com"
+     * Example: And I am on "/articles/isBatmanBruceWayne"
+     * Example: When I go to "/articles/isBatmanBruceWayne"
+     *
+     * @Given /^(?:|I )open page "(?P<page>[^"]+)"$/
+     */
+    public function openPage($page)
+    {
+        $mink = $this->getMink();
+        $mink->setDefaultSessionName('selenium2');
+        // Choose a Mink driver. More about it in later chapters.
+        $driver = new \Behat\Mink\Driver\GoutteDriver();
+        $session = new \Behat\Mink\Session($driver);
+        // start the session
+        $session->start();
+        $this->visitPath($page);
+    }
+    /**
+     *
+     * @Given /^(?:|I )open page with redirect URI$/
+     */
+    public function openPageWithRedirectUri()
+    {
+        $mink = $this->getMink();
+        $mink->setDefaultSessionName('selenium2');
+        // Choose a Mink driver. More about it in later chapters.
+        $driver = new \Behat\Mink\Driver\GoutteDriver();
+        $session = new \Behat\Mink\Session($driver);
+        // start the session
+        $session->start();
+        $this->visitPath($this->redirectURL);
+    }
+
+    /**
+     * @Then /^I wait "(?P<seconds>.*?)"$/
+     */
+    public function wait($seconds)
+    {
+        sleep($seconds);
+    }
+
+    /**
      *
      * @When I make request :method :uri with following JSON content:
      */
@@ -122,6 +143,7 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     public function saveAccessTokenFromTheLastResponse()
     {
         $response = $this->getResponseContentJson();
+//        $this -> token = $response['access_token'];
         $this -> token = $response->access_token;
         return;
     }
@@ -135,7 +157,6 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     {
         $response = $this->getResponseContentJson();
         $this -> redirectURL = $response->redirect_url;
-        var_dump($this -> redirectURL = $response->redirect_url);
         return;
     }
 

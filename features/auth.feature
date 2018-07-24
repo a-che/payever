@@ -1,5 +1,5 @@
-Feature: Authentication
-    Scenario: authentication
+Feature: Auth
+    Scenario: test1
         When I make request "POST" "/oauth/v2/token" with following JSON content:
         """
             {
@@ -32,7 +32,22 @@ Feature: Authentication
         And print last response
 
         And save redirect uri from the last response
+        And I make request POST for payment with redirect URL from last response with following JSON content:
+        """
+            {
+                    "name": "test",
+                    "price": "22",
+                    "priceNetto": "33",
+                    "vatRate": "44",
+                    "quantity": "3",
+                    "thumbnail": "https://someitem.com/thumbnail.jpg",
+                    "sku": "123"
+            }
+        """
+        And print last response
+        And show last response
 
-    @javascript
-    Scenario: Make payment
-        And go to page for make payment
+#        When I open page "http://sandbox.payever.de/oauth/v2/token"
+        When I open page with redirect URI
+And I wait "20"
+#        When I am on "http://sandbox.payever.de/oauth/v2/token"
