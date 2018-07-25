@@ -4,6 +4,7 @@ namespace Ulff\BehatRestApiExtension\Context;
 
 use Ulff\BehatRestApiExtension\Exception as Exception;
 use Behat\Gherkin\Node\TableNode;
+use PHPUnit_Framework_Assert as Assert;
 use Behat\Gherkin\Node\PyStringNode;
 use Codifico\ParameterBagExtension\Context\ParameterBagDictionary;
 use Behat\Symfony2Extension\Context\KernelDictionary;
@@ -17,6 +18,8 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     use KernelDictionary;
 
     private $headers = [];
+    protected $token;
+    protected $redirectURL;
 
     /**
      * Make request specifying http method and uri.
@@ -31,6 +34,134 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     {
         $uri = $this->extractFromParameterBag($uri);
         $this->request($method, $uri);
+    }
+
+    public function spin ($lambda, $wait = 60)
+    {
+        for ($i = 0; $i < $wait; $i++)
+        {
+            try {
+                if ($lambda($this)) {
+                    return true;
+                }
+            } catch (Exception $e) {
+                // do nothing
+            }
+
+            sleep(1);
+        }
+    }
+
+    /**
+     *
+     * @Then /^(?:|I )wait and should see "(?P<text>(?:[^"]|\\")*)" text$/
+     */
+    public function assertPageContainsTextAndWait($text)
+    {
+        $this->spin(function($context) use ($text){
+            return (!is_null($context->getSession()->getPage()->find("xpath", "//*[.//text()[contains(., '". $text ."')]]")));
+        });
+        $this->assertSession()->pageTextContains($this->fixStepArgument($text));
+    }
+
+    /**
+     *
+     * @Then /^(?:|I )switch to iframe$/
+     */
+    public function switchToIframe()
+    {
+        $this->getSession()->getDriver()->switchToIFrame(0);
+    }
+
+
+    /**
+     *
+     * @Then /^(?:|I )switch back to page$/
+     */
+    public function switchBack()
+    {
+        $this->getSession()->getDriver()->switchToWindow(0);
+    }
+
+    /**
+     *
+     * @Given /^(?:|I )open page with redirect URI$/
+     */
+    public function openPageWithRedirectUri()
+    {
+        $mink = $this->getMink();
+        $mink->setDefaultSessionName('selenium2');
+        $driver = new \Behat\Mink\Driver\GoutteDriver();
+        $session = new \Behat\Mink\Session($driver);
+        $session->start();
+
+        $value = "Bearer " . $this->token;
+        echo $this->redirectURL;
+        $session->setRequestHeader('Authorization', $value);
+        $this->visitPath($this->redirectURL);
+    }
+
+    /**
+     * @When /^I type "(?P<value>(?:[^"]|\\")*)" in "(?P<field>(?:[^"]|\\")*)" field on billing address page$/
+     * @When /^I type "(?P<value>(?:[^"]|\\")*)" in "(?P<field>(?:[^"]|\\")*)" field on personal info page$/
+     */
+    public function typeInFieldOnBillingPage($value, $field)
+    {
+        $element = $this->getSession()->getPage()->find("xpath", "//input[@formcontrolname='" . $field . "']");
+        Assert::assertNotEmpty($element, "Can't find `{$field}` field");
+        $element->setValue($value);
+        $element->blur();
+    }
+
+
+//    /**
+//     * @When /^I type "(?P<value>(?:[^"]|\\")*)" in "(?P<field>(?:[^"]|\\")*)" field on paymenth method page$/
+//     */
+//    public function typeInFieldOnPaymentPage($value, $field)
+//    {
+//        $element = $this->getSession()->getPage()->find("xpath", "//input[@formcontrolname='" . $field . "']");
+//        Assert::assertNotEmpty($element, "Can't find `{$field}` field");
+//        $element->setValue($value);
+//        $element->blur();
+//    }
+
+
+    /**
+     * @Then /^I find and select "([^"]*)" address$/
+     */
+    public function iFindAndSelectFromDropdown($value)
+    {
+        $element = $this->getSession()->getPage()->find("xpath", "//input[@formcontrolname='full_address']");
+        Assert::assertNotEmpty($element, "Can't find element //input[@formcontrolname='full_address']");
+        $element->setValue($value);
+        $element->focus();
+        $this->spin(function($context) use ($value){
+            return (!is_null($context->getSession()->getPage()->find("xpath", "//span[@class='pac-item-query']/span[@class='pac-matched' and text()='" . $value . "']")));
+        });
+        $name = $this->getSession()->getPage()->find("xpath", "//span[@class='pac-item-query']/span[@class='pac-matched' and text()='" . $value . "']");
+        Assert::assertNotEmpty($name, "Can't find //span[@class='pac-item-query']/span[@class='pac-matched' and text()='" . $value . "']");
+        $name->click();
+    }
+
+    /**
+     * @Then save access token from the last response
+     */
+    public function saveAccessTokenFromTheLastResponse()
+    {
+        $response = $this->getResponseContentJson();
+//        $this -> token = $response['access_token'];
+        $this -> token = $response->access_token;
+        return;
+    }
+
+    /**
+     * @Then save redirect uri from the last response
+     */
+    public function saveRedirectUriFromTheLastResponse()
+    {
+        $response = $this->getResponseContentJson();
+        $this -> redirectURL = $response->redirect_url;
+        return;
     }
 
     /**
@@ -70,41 +201,6 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     }
 
     /**
-     * Opens specified page
-     * Example: Given I am on "http://batman.com"
-     * Example: And I am on "/articles/isBatmanBruceWayne"
-     * Example: When I go to "/articles/isBatmanBruceWayne"
-     *
-     * @Given /^(?:|I )open page "(?P<page>[^"]+)"$/
-     */
-    public function openPage($page)
-    {
-        $mink = $this->getMink();
-        $mink->setDefaultSessionName('selenium2');
-        // Choose a Mink driver. More about it in later chapters.
-        $driver = new \Behat\Mink\Driver\GoutteDriver();
-        $session = new \Behat\Mink\Session($driver);
-        // start the session
-        $session->start();
-        $this->visitPath($page);
-    }
-    /**
-     *
-     * @Given /^(?:|I )open page with redirect URI$/
-     */
-    public function openPageWithRedirectUri()
-    {
-        $mink = $this->getMink();
-        $mink->setDefaultSessionName('selenium2');
-        // Choose a Mink driver. More about it in later chapters.
-        $driver = new \Behat\Mink\Driver\GoutteDriver();
-        $session = new \Behat\Mink\Session($driver);
-        // start the session
-        $session->start();
-        $this->visitPath($this->redirectURL);
-    }
-
-    /**
      * @Then /^I wait "(?P<seconds>.*?)"$/
      */
     public function wait($seconds)
@@ -133,41 +229,6 @@ class RestApiContext extends MinkContext implements Context, SnippetAcceptingCon
     public function iSetHeaderWithValue($name, $value)
     {
         $this->addHeader($name, $value);
-    }
-
-    protected $token;
-
-    /**
-     * @Then save access token from the last response
-     */
-    public function saveAccessTokenFromTheLastResponse()
-    {
-        $response = $this->getResponseContentJson();
-//        $this -> token = $response['access_token'];
-        $this -> token = $response->access_token;
-        return;
-    }
-
-    protected $redirectURL;
-
-    /**
-     * @Then save redirect uri from the last response
-     */
-    public function saveRedirectUriFromTheLastResponse()
-    {
-        $response = $this->getResponseContentJson();
-        $this -> redirectURL = $response->redirect_url;
-        return;
-    }
-
-    /**
-     *
-     * @When I make request :method for payment with redirect URL from last response with following JSON content:
-     */
-    public function iMakeRequestForPaymentWithFollowingJSONContent($method, PyStringNode $json)
-    {
-        $uri = $this -> $redirectURL;
-        $this->request($method, $uri, json_decode($json, true));
     }
 
     /**
